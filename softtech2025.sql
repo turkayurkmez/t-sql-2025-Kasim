@@ -350,3 +350,130 @@ JOIN Products p
 ON p.ProductID = od.ProductID
 GROUP BY c.CompanyName, p.ProductName
 ORDER BY c.CompanyName, adet DESC
+
+-- Þirketimiz, hangi yýlýn hangi ayýnda ne kadar ciro yapmýþ?
+
+SELECT
+  X.Volume
+FROM
+(SELECT 
+  YEAR(OrderDate) as 'Year',
+  MONTH(OrderDate) as 'Month',
+  SUM(UnitPrice * Quantity) as Volume
+FROM Orders o JOIN [Order Details] od
+ON o.OrderID = od.OrderID
+GROUP BY  YEAR(OrderDate), MONTH(OrderDate)) as x
+--HAVING Year(OrderDate)=1996 aND MONTH(OrderDate) = 7 
+WHERE x.Year =1998 AND x.Month = 5
+ORDER BY Year, Month
+
+--VIEWS
+
+CREATE VIEW VolumeByDate
+AS
+SELECT 
+  YEAR(OrderDate) as 'Year',
+  MONTH(OrderDate) as 'Month',
+  SUM(UnitPrice * Quantity) as Volume
+FROM Orders o JOIN [Order Details] od
+ON o.OrderID = od.OrderID
+GROUP BY  YEAR(OrderDate), MONTH(OrderDate)
+
+
+--View'ý kullanmak:
+SELECT SUM(Volume) FROM VolumeByDate WHERE  Year = 1997
+
+
+
+CREATE VIEW AlmanMusteriler
+AS
+SELECT * FROM Customers WHERE Country = 'Germany'
+WITH CHECK OPTION
+
+INSERT into AlmanMusteriler (CustomerID,CompanyName,Country)
+                 values     ('GERMI','Fail Test','Italy')
+
+-- Sadece aktif olan ürünleri getiren View:
+CREATE VIEW SatistakiUrunler 
+AS
+SELECT 
+ ProductName, Discontinued
+FROM Products WHERE Discontinued = 0
+
+
+SELECT * FROM SatistakiUrunler
+--CTE:
+
+SELECT YEAR(OrderDate) 'year', COUNT(CustomerID) as 'Count' FROM Orders
+GROUP BY YEAR(OrderDate)
+
+WITH CTE_by_year
+AS
+(
+   SELECT YEAR(OrderDate) 'year', CustomerID FROM Orders 
+)
+
+SELECT year, COUNT(CustomerID)  FROM CTE_by_year
+GROUP BY year
+
+
+--INDEX
+SELECT
+* FROM sys.tables
+
+SELECT 
+* FROM Products WHERE ProductName = 'Chai'
+
+
+CREATE NONCLUSTERED INDEX IX_ProductName ON Products
+(
+  ProductName ASC
+)
+
+DBCC ShowContig('dbo.Products')
+--Örnek için 5000 yeni ürün:
+DECLARE @count int
+SET @count = 1
+WHILE @count <= 1000
+  BEGIN
+    INSERT into Products(ProductName,UnitPrice) values ('Ürün'+CAST(@count as nvarchar(5)), @count*100) 
+    SET @count = @count + 1 
+  END
+
+
+
+SELECT COUNT(*) FROM Products
+SELECT * FROM Products WHERE ProductName LIKE 'Ürün%'
+
+
+DELETE Products WHERE 
+ProductName BETWEEN 'Ürün100' AND 'Ürün110'
+
+DBCC INDEXDEFRAG (Northwind,'Products',IX_ProductName)
+
+CREATE UNIQUE CLUSTERED INDEX IX_Year_Month ON dbo.VolumeByDate 
+(
+  Year ASC,
+  Month ASC
+)
+
+SELECT * FROM VolumeByDate
+WHERE YEAR = 1998 AND Month = 3
+
+
+SELECT 
+  ProductName, UnitPrice, UnitsInStock, ColorCode = CASE 
+                                                       WHEN UnitsInStock = 0 THEN 'Red'
+													   WHEN UnitsInStock < 50 THEN 'Yellow'
+													   WHEN UnitsInStock >=50 THEN 'Green'
+                                                    END
+FROM Products
+ORDER BY UnitsInStock
+
+SELECT 
+   CompanyName,  State= CASE
+                              WHEN Fax is NULL THEN 'Yok'
+							  WHEN Fax is NOT NULL Then Fax
+							END
+FROM Customers
+
